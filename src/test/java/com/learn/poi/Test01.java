@@ -1,15 +1,26 @@
 package com.learn.poi;
 
+import com.learn.poi.handler.SheetHandler;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.openxml4j.opc.PackageAccess;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.util.IOUtils;
+import org.apache.poi.xssf.eventusermodel.XSSFReader;
+import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler;
+import org.apache.poi.xssf.model.SharedStringsTable;
+import org.apache.poi.xssf.model.StylesTable;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.Test;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.XMLReaderFactory;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.util.Iterator;
 
 import static javax.xml.bind.JAXBIntrospector.getValue;
 
@@ -130,7 +141,7 @@ public class Test01 {
 
     @Test
     public void test05() throws IOException {
-        Workbook wb = new XSSFWorkbook("E:\\JAVA相关\\基于SaaS平台的iHRM实战开发\\08-员工管理及POI\\01-员工管理及POI入门\\资源\\资源\\Excel相关\\2018-03人员信息.xlsx");
+        Workbook wb = new XSSFWorkbook("E:\\JAVA相关\\基于SaaS平台的iHRM实战开发\\08-员工管理及POI\\02-POI报表的高级应用\\资源\\百万数据报表\\demo.xlsx");
         //2. 获取sheet从0开始
         Sheet sheet = wb.getSheetAt(0);
         //获取总行数
@@ -178,6 +189,34 @@ public class Test01 {
         break;
         }
         return value;
+    }
+
+    /**
+     * 使用事件模型读取数据
+     */
+    @Test
+    public void test5() throws OpenXML4JException, IOException, SAXException {
+        String path = "E:\\JAVA相关\\基于SaaS平台的iHRM实战开发\\08-员工管理及POI\\02-POI报表的高级应用\\资源\\百万数据报表\\demo.xlsx";
+        // 根据excel报表获取OPCpackage
+        OPCPackage opc = OPCPackage.open(path, PackageAccess.READ);
+        // 创建XSSFReader
+        XSSFReader reader = new XSSFReader(opc);
+        //获取SharedStringTable对象
+        SharedStringsTable stringsTable = reader.getSharedStringsTable();
+        //获取StyleTable对象
+        StylesTable stylesTable = reader.getStylesTable();
+        //创建Sax的xmlReader对象
+        XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+        //注册事件处理器
+        XSSFSheetXMLHandler xssfSheetXMLHandler = new XSSFSheetXMLHandler(stylesTable, stringsTable, new SheetHandler(), false);
+        xmlReader.setContentHandler(xssfSheetXMLHandler);
+        //逐行读取
+        XSSFReader.SheetIterator sheetIterator = (XSSFReader.SheetIterator) reader.getSheetsData();
+        while (sheetIterator.hasNext()) {
+            InputStream stream = sheetIterator.next();
+            InputSource source = new InputSource(stream);
+            xmlReader.parse(source);
+        }
     }
 
 
